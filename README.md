@@ -1,2 +1,2 @@
 # Chess
- The classic game "Chess". Progammed using Pygame
+ The classic game "Chess". Programmed using Pygame.
