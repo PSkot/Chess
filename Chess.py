@@ -11,7 +11,9 @@ boardWidth = 800
 boardHeight = boardWidth
 borderSize = 20
 markingSize = 5
+legalMoveRadius = 10
 imageSize = 60
+imageError = 1
 tileSize = boardWidth // 8
 marginSize = 100
 board_x = list(range(borderSize, boardWidth + borderSize, tileSize))
@@ -52,7 +54,7 @@ class board(object):
         self.x = x
         self.y = y
 
-    def drawTiles(self, win, mouseClicked, selected_location):
+    def drawTiles(self, win, mouseClicked, selected_location, legal_moves):
         for i in self.x:
             if np.mod(i//tileSize, 2) == 0:
                 next_col = 'white'
@@ -62,16 +64,24 @@ class board(object):
             for j in self.y:
                 if next_col == 'black':
                     if [i, j] == selected_location and mouseClicked == True:
-                        pygame.draw.rect(win, (0, 255, 0), (i, j, tileSize, tileSize))
-                        pygame.draw.rect(win, (169, 169, 169), (i + markingSize, j + markingSize, tileSize - markingSize*2, tileSize - markingSize*2))
+                        if legal_moves == []:
+                            pygame.draw.rect(win, (225, 0, 0), (i, j, tileSize, tileSize))
+                            pygame.draw.rect(win, (169, 169, 169), (i + markingSize, j + markingSize, tileSize - markingSize*2, tileSize - markingSize*2))
+                        else:
+                            pygame.draw.rect(win, (0, 225, 0), (i, j, tileSize, tileSize))
+                            pygame.draw.rect(win, (169, 169, 169), (i + markingSize, j + markingSize, tileSize - markingSize*2, tileSize - markingSize*2))
                     else:
                         pygame.draw.rect(win, (169, 169, 169), (i, j, tileSize, tileSize))
                     next_col = 'white'
 
                 else:
                     if [i, j] == selected_location and mouseClicked == True:
-                        pygame.draw.rect(win, (0, 255, 0), (i, j, tileSize, tileSize))
-                        pygame.draw.rect(win, (255, 255, 255), (i + markingSize, j + markingSize, tileSize - markingSize*2, tileSize - markingSize*2))
+                        if legal_moves == []:
+                            pygame.draw.rect(win, (225, 0, 0), (i, j, tileSize, tileSize))
+                            pygame.draw.rect(win, (255, 255, 255), (i + markingSize, j + markingSize, tileSize - markingSize*2, tileSize - markingSize*2))
+                        else:
+                            pygame.draw.rect(win, (0, 225, 0), (i, j, tileSize, tileSize))
+                            pygame.draw.rect(win, (255, 255, 255), (i + markingSize, j + markingSize, tileSize - markingSize*2, tileSize - markingSize*2))       
                     else:
                         pygame.draw.rect(win, (255, 255, 255), (i, j, tileSize, tileSize))
                     next_col = 'black'
@@ -89,7 +99,7 @@ class board(object):
 #Chess pieces
 class pawn(object):
 
-    def __init__(self, coord, opp_coords, own_coords, col, player, moved = False):
+    def __init__(self, coord, opp_coords, own_coords, col, player, moved, board_coords):
         self.x = coord[0]
         self.y = coord[1]
         self.opp_coords = opp_coords
@@ -97,91 +107,180 @@ class pawn(object):
         self.col = col
         self.player = player
         self.moved = moved
+        self.board_coords = board_coords
 
     def legal_moves(self):
         legals = []
         if self.moved == False:
-            if [self.x, self.y - tileSize] in self.opp_coords:
-                if self.player == 1:
-                    legals.append([self.x - tileSize, self.y - tileSize])
-                    legals.append([self.x + tileSize, self.y - tileSize])
-                else:
-                    legals.append([self.x - tileSize, self.y + tileSize])
-                    legals.append([self.x + tileSize, self.y + tileSize])
+            if self.player == 1:
+                if [self.x, self.y - tileSize] not in self.opp_coords:
+                    legals.append([self.x, self.y - tileSize])
+                if [self.x, self.y - tileSize*2] not in self.opp_coords:
+                    legals.append([self.x, self.y - tileSize*2])                    
+            else:
+                if [self.x, self.y + tileSize] not in self.opp_coords:
+                    legals.append([self.x, self.y + tileSize])
+                if [self.x, self.y + tileSize*2] not in self.opp_coords:
+                    legals.append([self.x, self.y + tileSize*2])
+        else:
+            if self.player == 1:
+                if [self.x, self.y - tileSize] not in self.opp_coords:
+                    legals.append([self.x, self.y - tileSize])
+            
+            else:
+                if [self.x, self.y + tileSize] not in self.opp_coords:
+                    legals.append([self.x, self.y + tileSize])
+
+        if self.player == 1:
+            if [self.x - tileSize, self.y - tileSize] in self.opp_coords:
+                legals.append([self.x - tileSize, self.y - tileSize])
+            if [self.x + tileSize, self.y - tileSize] in self.opp_coords:
+                legals.append([self.x + tileSize, self.y - tileSize])
+
+        else:
+            if [self.x - tileSize, self.y + tileSize] in self.opp_coords:
+                legals.append([self.x - tileSize, self.y + tileSize])
+            if [self.x + tileSize, self.y + tileSize] in self.opp_coords:
+                legals.append([self.x + tileSize, self.y + tileSize])
+
+
+        #Delete coordinate in legals if it is outside the board
+        if legals != []:
+            for i in range(len(legals)):
+                try:
+                    if legals[i] not in board_coords:
+                        del legals[i]
+                except IndexError:
+                    pass
+
+        #Delete coordinate in legals if it overlaps with own chess pieces
+        if legals != []:
+            for i in range(len(legals)):
+                try:
+                    if legals[i] in self.own_coords:
+                        del legals[i]
+                except IndexError:
+                    pass
 
         return legals
 
     def draw(self, win):
         if self.col == 'white':
-            win.blit(pawn_white, [self.x + ((tileSize - imageSize)//2), self.y + ((tileSize - imageSize)//2)])
+            win.blit(pawn_white, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
         else:
-            win.blit(pawn_black, [self.x + ((tileSize - imageSize)//2), self.y + ((tileSize - imageSize)//2)])
+            win.blit(pawn_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 class rook(object):
-    def __init__(self, coord, opp_coords, own_coords, col):
-        self.x = coord[0] + ((tileSize - imageSize)//2)
-        self.y = coord[1] + ((tileSize - imageSize)//2)
+    def __init__(self, coord, opp_coords, own_coords, col, board_coords):
+        self.x = coord[0]
+        self.y = coord[1]
+        self.opp_coords = opp_coords
+        self.own_coords = own_coords
         self.col = col
+        self.board_coords = board_coords
 
     def draw(self, win):
             if self.col == 'white':
-                win.blit(rook_white, [self.x, self.y])
+                win.blit(rook_white, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
             else:
-                win.blit(rook_black, [self.x, self.y])
+                win.blit(rook_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 class knight(object):
-    def __init__(self, coord, opp_coords, own_coords, col):
-        self.x = coord[0] + ((tileSize - imageSize)//2)
-        self.y = coord[1] + ((tileSize - imageSize)//2)
+    def __init__(self, coord, opp_coords, own_coords, col, board_coords):
+        self.x = coord[0]
+        self.y = coord[1]
+        self.opp_coords = opp_coords
+        self.own_coords = own_coords
         self.col = col
+        self.board_coords = board_coords
+
+    def legal_moves(self):
+        legals = []
+        legals.append([self.x + tileSize * 2, self.y + tileSize])
+        legals.append([self.x + tileSize * 2, self.y - tileSize])
+        legals.append([self.x - tileSize * 2, self.y + tileSize])
+        legals.append([self.x - tileSize * 2, self.y - tileSize])
+        legals.append([self.x + tileSize, self.y + tileSize * 2])
+        legals.append([self.x + tileSize, self.y - tileSize * 2])
+        legals.append([self.x - tileSize, self.y + tileSize * 2])
+        legals.append([self.x - tileSize, self.y - tileSize * 2])
+
+        if legals != []:
+            for i in range(len(legals)):
+                try:
+                    if legals[i] not in board_coords:
+                        del legals[i]
+                except IndexError:
+                    pass
+
+        if legals != []:
+            for i in range(len(legals)):
+                try:
+                    if legals[i] in self.own_coords:
+                        del legals[i]
+                except IndexError:
+                    pass
+
+        return legals
 
     def draw(self, win):
             if self.col == 'white':
-                win.blit(knight_white, [self.x, self.y])
+                win.blit(knight_white, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
             else:
-                win.blit(knight_black, [self.x, self.y])
+                win.blit(knight_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 class bishop(object):
-    def __init__(self, coord, opp_coords, own_coords, col):
-        self.x = coord[0] + ((tileSize - imageSize)//2)
-        self.y = coord[1] + ((tileSize - imageSize)//2)
+    def __init__(self, coord, opp_coords, own_coords, col, board_coords):
+        self.x = coord[0]
+        self.y = coord[1]
+        self.opp_coords = opp_coords
+        self.own_coords = own_coords
         self.col = col
+        self.board_coords = board_coords
 
     def draw(self, win):
             if self.col == 'white':
-                win.blit(bishop_white, [self.x, self.y])
+                win.blit(bishop_white, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
             else:
-                win.blit(bishop_black, [self.x, self.y])
+                win.blit(bishop_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 class queen(object):
-    def __init__(self, coord, opp_coords, own_coords, col):
-        self.x = coord[0] + ((tileSize - imageSize)//2)
-        self.y = coord[1] + ((tileSize - imageSize)//2)
+    def __init__(self, coord, opp_coords, own_coords, col, board_coords):
+        self.x = coord[0]
+        self.y = coord[1]
+        self.opp_coords = opp_coords
+        self.own_coords = own_coords
         self.col = col
+        self.board_coords = board_coords
 
     def draw(self, win):
             if self.col == 'white':
-                win.blit(queen_white, [self.x, self.y])
+                win.blit(queen_white, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
             else:
-                win.blit(queen_black, [self.x, self.y])
+                win.blit(queen_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 class king(object):
-    def __init__(self, coord, opp_coords, own_coords, col, player, moved = False):
-        self.x = coord[0] + ((tileSize - imageSize)//2)
-        self.y = coord[1] + ((tileSize - imageSize)//2)
+    def __init__(self, coord, opp_coords, own_coords, col, player, moved, board_coords):
+        self.x = coord[0]
+        self.y = coord[1]
+        self.opp_coords = opp_coords
+        self.own_coords = own_coords
         self.col = col
+        self.player = player
+        self.moved = moved
+        self.board_coords = board_coords
 
     def draw(self, win):
             if self.col == 'white':
-                win.blit(king_white, [self.x, self.y])
+                win.blit(king_white, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
             else:
-                win.blit(king_black, [self.x, self.y])
+                win.blit(king_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 #Drawing game window
-def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location):
+def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, legal_moves = []):
     #Draw board
     board.drawBorder(win)
-    board.drawTiles(win, mouseClicked, selected_location)
+    board.drawTiles(win, mouseClicked, selected_location, legal_moves)
     board.drawMargin(win)
 
     #Draw pieces
@@ -190,6 +289,11 @@ def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked,
             p1Pieces[i].draw(win)
         if p2Pos[i] != '':
             p2Pieces[i].draw(win)
+
+    #Draw legal moves
+    if legal_moves != []:
+        for i in legal_moves:
+            pygame.draw.circle(win, (0, 225, 0), (i[0] + tileSize//2, i[1] + tileSize//2), legalMoveRadius)
 
     pygame.display.update()
 
@@ -214,30 +318,30 @@ for i in board_x:
 
 #Pawns
 for i in range(8):
-    p1Pieces.append(pawn(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col))
-    p2Pieces.append(pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col))
+    p1Pieces.append(pawn(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = False, board_coords = board_coords))
+    p2Pieces.append(pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = False, board_coords = board_coords))
 
 #Chess pieces
 for i in range (8, 16):
     if i in [8, 15]:
-        p1Pieces.append(rook(p1Pos[i], p2Pos, p1Pos, col = p1Col))
-        p2Pieces.append(rook(p2Pos[i], p1Pos, p2Pos, col = p2Col))
+        p1Pieces.append(rook(p1Pos[i], p2Pos, p1Pos, col = p1Col, board_coords = board_coords))
+        p2Pieces.append(rook(p2Pos[i], p1Pos, p2Pos, col = p2Col, board_coords = board_coords))
 
     elif i in [9, 14]:
-        p1Pieces.append(knight(p1Pos[i], p2Pos, p1Pos, col = p1Col))
-        p2Pieces.append(knight(p2Pos[i], p1Pos, p2Pos, col = p2Col))
+        p1Pieces.append(knight(p1Pos[i], p2Pos, p1Pos, col = p1Col, board_coords = board_coords))
+        p2Pieces.append(knight(p2Pos[i], p1Pos, p2Pos, col = p2Col, board_coords = board_coords))
 
     elif i in [10, 13]:
-        p1Pieces.append(bishop(p1Pos[i], p2Pos, p1Pos, col = p1Col))
-        p2Pieces.append(bishop(p2Pos[i], p1Pos, p2Pos, col = p2Col))
+        p1Pieces.append(bishop(p1Pos[i], p2Pos, p1Pos, col = p1Col, board_coords = board_coords))
+        p2Pieces.append(bishop(p2Pos[i], p1Pos, p2Pos, col = p2Col, board_coords = board_coords))
 
     elif i == 11:
-        p1Pieces.append(queen(p1Pos[i], p2Pos, p1Pos, col = p1Col))
-        p2Pieces.append(queen(p2Pos[i], p1Pos, p2Pos, col = p2Col))
+        p1Pieces.append(queen(p1Pos[i], p2Pos, p1Pos, col = p1Col, board_coords = board_coords))
+        p2Pieces.append(queen(p2Pos[i], p1Pos, p2Pos, col = p2Col, board_coords = board_coords))
 
     elif i == 12:
-        p1Pieces.append(king(p1Pos[i], p2Pos, p1Pos, col = p1Col, player = 1))
-        p2Pieces.append(king(p2Pos[i], p1Pos, p2Pos, col = p2Col, player = 2))
+        p1Pieces.append(king(p1Pos[i], p2Pos, p1Pos, col = p1Col, player = 1, moved = False, board_coords = board_coords))
+        p2Pieces.append(king(p2Pos[i], p1Pos, p2Pos, col = p2Col, player = 2, moved = False, board_coords = board_coords))
 
 #Main program
 run = True
@@ -245,14 +349,22 @@ selected_location = 0
 noMove = False
 
 while run:
-
+    #Initiate gameboard
     gameBoard = board(board_x, board_y)
 
+    #Set legal_moves to an empty list if mouse is not clicked
+    if mouseClicked == False:
+        legal_moves = []
+
+    #Get events
     for event in pygame.event.get():
+
+        #Quit game if event type is quit
         if event.type == pygame.QUIT:
             run = False
             pygame.quit()
 
+        #Check if mouse button is clicked
         if event.type == pygame.MOUSEBUTTONDOWN:
 
             mousePos = list(pygame.mouse.get_pos())
@@ -266,8 +378,10 @@ while run:
                         if i != '':
                             if mousePos[0] >= i[0] and mousePos[0] <= i[0] + tileSize and mousePos[1] >= i[1] and mousePos[1] <= i[1] + tileSize:
                                 selected_location = i
-                                if i in range(8):
+                                if p1Pos.index(i) in range(8) or p1Pos.index(i) in [9, 14]:
                                     legal_moves = p1Pieces[p1Pos.index(i)].legal_moves()
+
+                                #Store mouseclick
                                 mouseClicked = True
                                 break
 
@@ -275,37 +389,44 @@ while run:
                     #Move location if selected
                     for j in board_coords:
                         if mousePos[0] >= j[0] and mousePos[0] <= j[0] + tileSize and mousePos[1] >= j[1] and mousePos[1] <= j[1] + tileSize:
-                            if j in p1Pos:
+                            
+                            #Reset move if location is not in legal_moves
+                            if j not in legal_moves:
                                 noMove = True
                                 mouseClicked = False
                                 break
                             i = p1Pos.index(selected_location)
                             p1Pos[i] = j
+                            
+                            #Reposition chess pieces
                             if i in [8, 15]:
-                                p1Pieces[i] = rook(p1Pos[i], p2Pos, p1Pos, col = p1Col)
+                                p1Pieces[i] = rook(p1Pos[i], p2Pos, p1Pos, col = p1Col, board_coords = board_coords)
 
                             elif i in [9, 14]:
-                                p1Pieces[i] = knight(p1Pos[i], p2Pos, p1Pos, col = p1Col)
+                                p1Pieces[i] = knight(p1Pos[i], p2Pos, p1Pos, col = p1Col, board_coords = board_coords)
 
                             elif i in [10, 13]:
-                                p1Pieces[i] = bishop(p1Pos[i], p2Pos, p1Pos, col = p1Col)
+                                p1Pieces[i] = bishop(p1Pos[i], p2Pos, p1Pos, col = p1Col, board_coords = board_coords)
 
                             elif i == 11:
-                                p1Pieces[i] = queen(p1Pos[i], p2Pos, p1Pos, col = p1Col)
+                                p1Pieces[i] = queen(p1Pos[i], p2Pos, p1Pos, col = p1Col, board_coords = board_coords)
 
                             elif i == 12:
-                                p1Pieces[i] = king(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col)
+                                p1Pieces[i] = king(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = True, board_coords = board_coords)
 
-                            else:
-                                p1Pieces[i] = pawn(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col)
+                            elif j in legal_moves:
+                                p1Pieces[i] = pawn(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = True, board_coords = board_coords)
 
-                            if j in p2Pos:
+                            #Remove opponent's piece if taken
+                            if j in p2Pos and j in legal_moves:
                                 p2Pos[p2Pos.index(j)] = ''
 
+                            #Register move and reset mouseclick
                             noMove = False
                             mouseClicked = False
                             break
 
+                    #Switch turn
                     if noMove == False:
                         p1Turn = False
 
@@ -319,6 +440,8 @@ while run:
                         if i != '':
                             if mousePos[0] >= i[0] and mousePos[0] <= i[0] + tileSize and mousePos[1] >= i[1] and mousePos[1] <= i[1] + tileSize:
                                 selected_location = i
+                                if p2Pos.index(i) in range(8) or p2Pos.index(i) in [9, 14]:
+                                    legal_moves = p2Pieces[p2Pos.index(i)].legal_moves()
                                 mouseClicked = True
                                 break
 
@@ -326,29 +449,30 @@ while run:
                     #Move location if selected
                     for j in board_coords:
                         if mousePos[0] >= j[0] and mousePos[0] <= j[0] + tileSize and mousePos[1] >= j[1] and mousePos[1] <= j[1] + tileSize:
-                            if j in p2Pos:
+                            if j not in legal_moves:
                                 noMove = True
                                 mouseClicked = False
                                 break
                             i = p2Pos.index(selected_location)
+
                             p2Pos[i] = j
                             if i in [8, 15]:
-                                p2Pieces[i] = rook(p2Pos[i], p1Pos, p2Pos, col = p2Col)
+                                p2Pieces[i] = rook(p2Pos[i], p1Pos, p2Pos, col = p2Col, board_coords = board_coords)
 
                             elif i in [9, 14]:
-                                p2Pieces[i] = knight(p2Pos[i], p1Pos, p2Pos, col = p2Col)
+                                p2Pieces[i] = knight(p2Pos[i], p1Pos, p2Pos, col = p2Col, board_coords = board_coords)
 
                             elif i in [10, 13]:
-                                p2Pieces[i] = bishop(p2Pos[i], p1Pos, p2Pos, col = p2Col)
+                                p2Pieces[i] = bishop(p2Pos[i], p1Pos, p2Pos, col = p2Col, board_coords = board_coords)
 
                             elif i == 11:
-                                p2Pieces[i] = queen(p2Pos[i], p1Pos, p2Pos, col = p2Col)
+                                p2Pieces[i] = queen(p2Pos[i], p1Pos, p2Pos, col = p2Col, board_coords = board_coords)
 
                             elif i == 12:
-                                p2Pieces[i] = king(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col)
+                                p2Pieces[i] = king(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = True, board_coords = board_coords)
 
                             else:
-                                p2Pieces[i] = pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col)
+                                p2Pieces[i] = pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = True, board_coords = board_coords)
 
                             if j in p1Pos:
                                 p1Pos[p1Pos.index(j)] = ''
@@ -361,4 +485,4 @@ while run:
                         p1Turn = True
 
     if run == True:
-        redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location)
+        redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, legal_moves)
