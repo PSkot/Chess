@@ -671,6 +671,8 @@ p1PieceTypes = ['p','p','p','p','p','p','p','p','r','n','b','q', 'k', 'b', 'n', 
 p2PieceTypes = ['p','p','p','p','p','p','p','p','r','n','b','q', 'k', 'b', 'n', 'r']
 p1PawnMoved = [False]*8
 p2PawnMoved = [False]*8
+p1PawnMovedTwo = [False]*8
+p2PawnMovedTwo = [False]*8
 p1KingMoved = False
 p2KingMoved = False
 
@@ -795,6 +797,26 @@ while run:
                             if mousePos[0] >= i[0] and mousePos[0] <= i[0] + tileSize and mousePos[1] >= i[1] and mousePos[1] <= i[1] + tileSize:
                                 selected_location = i
                                 legal_moves = p1Pieces[p1Pos.index(i)].legal_moves()
+
+                                for x in range(8):
+                                    if p1PieceTypes[x] == 'p' and p1Pos[x][1] == marginSize + borderSize + tileSize*3:
+                                        for z in range(8):
+                                            try:
+                                                if p2PawnMovedTwo[z] == True and p2Pos[z][0] + tileSize == p1Pos[x][0]:
+                                                    if x == p1Pos.index(i):
+                                                        legal_moves.append([p1Pos[x][0]-tileSize, p1Pos[x][1]-tileSize])
+                                                        break
+                                            except IndexError:
+                                                pass
+
+                                            try:
+                                                if p2PawnMovedTwo[z] == True and p2Pos[z][0] - tileSize == p1Pos[x][0]:
+                                                    if x == p1Pos.index(i):
+                                                        legal_moves.append([p1Pos[x][0]+tileSize, p1Pos[x][1]-tileSize])
+                                                        break
+                                            except IndexError:
+                                                pass
+
                                 for x in range(len(legals_remove)):
                                     if p1Pos.index(i) == legals_remove[x][0]:
                                         try:
@@ -805,7 +827,6 @@ while run:
                                 #Store mouseclick
                                 mouseClicked = True
                                 break
-
                 else:
                     #Move location if selected
                     for j in board_coords:
@@ -817,6 +838,7 @@ while run:
                                 mouseClicked = False
                                 break
                             i = p1Pos.index(selected_location)
+                            old_pos = p1Pos[i].copy()
                             p1Pos[i] = j
 
                             #Reposition chess pieces
@@ -861,6 +883,8 @@ while run:
                                     pass
 
                                 else:
+                                    if old_pos[1] - p1Pos[i][1] == tileSize*2:
+                                        p1PawnMovedTwo[i] = True
                                     p1PawnMoved[i] = True
                                     p1Pieces[i] = pawn(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[i])
 
@@ -881,7 +905,6 @@ while run:
                                 p1Pieces[i] = rook(p1Pos[i], p2Pos, p1Pos, col = p1Col)
 
 
-
                             #Remove opponent's piece if taken
                             if j in p2Pos and j in legal_moves:
                                 p2Pos[p2Pos.index(j)] = ''
@@ -889,6 +912,7 @@ while run:
                             #Register move and reset mouseclick
                             noMove = False
                             mouseClicked = False
+                            p2PawnMovedTwo = [False]*8
                             break
 
                     #Switch turn
@@ -993,6 +1017,26 @@ while run:
                             if mousePos[0] >= i[0] and mousePos[0] <= i[0] + tileSize and mousePos[1] >= i[1] and mousePos[1] <= i[1] + tileSize:
                                 selected_location = i
                                 legal_moves = p2Pieces[p2Pos.index(i)].legal_moves()
+
+                                for x in range(8):
+                                    if p2PieceTypes[x] == 'p' and p2Pos[x][1] == marginSize + borderSize + tileSize*4:
+                                        for z in range(8):
+                                            try:
+                                                if p1PawnMovedTwo[z] == True and p1Pos[z][0] + tileSize == p2Pos[x][0]:
+                                                    if x == p2Pos.index(i):
+                                                        legal_moves.append([p2Pos[x][0]-tileSize, p2Pos[x][1]+tileSize])
+                                                        break
+                                            except IndexError:
+                                                pass
+
+                                            try:
+                                                if p1PawnMovedTwo[z] == True and p1Pos[z][0] - tileSize == p2Pos[x][0]:
+                                                    if x == p2Pos.index(i):
+                                                        legal_moves.append([p2Pos[x][0]+tileSize, p2Pos[x][1]+tileSize])
+                                                        break
+                                            except IndexError:
+                                                pass
+
                                 for x in range(len(legals_remove)):
                                     if p2Pos.index(i) == legals_remove[x][0]:
                                         try:
@@ -1012,7 +1056,7 @@ while run:
                                 mouseClicked = False
                                 break
                             i = p2Pos.index(selected_location)
-
+                            old_pos = p2Pos[i].copy()
                             p2Pos[i] = j
 
                             if p2PieceTypes[i] == 'p':
@@ -1056,6 +1100,8 @@ while run:
                                     pass
 
                                 else:
+                                    if p2Pos[i][1] - old_pos[1] == tileSize*2:
+                                        p2PawnMovedTwo[i] = True
                                     p2PawnMoved[i] = True
                                     p2Pieces[i] = pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[i])
 
@@ -1080,6 +1126,7 @@ while run:
 
                             noMove = False
                             mouseClicked = False
+                            p1PawnMovedTwo = [False]*8
                             break
 
                     if noMove == False:
