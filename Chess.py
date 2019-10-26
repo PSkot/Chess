@@ -7,18 +7,20 @@ pygame.init()
 
 #Basic game info
 name = "Chess"
-boardWidth = 800
+boardWidth = 720
 boardHeight = boardWidth
 borderSize = 20
 markingSize = 5
 legalMoveRadius = 10
 imageSize = 60
 imageError = 1
+textAlignment = 8
 tileSize = boardWidth // 8
 marginSize = 100
 board_x = list(range(borderSize, boardWidth + borderSize, tileSize))
 board_y = list(range(marginSize + borderSize, boardHeight + marginSize + borderSize, tileSize))
 board_coords = []
+font = pygame.font.SysFont('comicsans', 35, bold = True, italic = True)
 
 for i in board_x:
     for j in board_y:
@@ -578,7 +580,7 @@ class king(object):
                 win.blit(king_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 #Drawing game window
-def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, legal_moves = [], pawn = False, player = 1):
+def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, p1Kingcheck, p2KingCheck, legal_moves = [], pawn = False, player = 1):
     #Draw board
     board.drawBorder(win)
     board.drawTiles(win, mouseClicked, selected_location, legal_moves)
@@ -613,6 +615,14 @@ def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked,
             win.blit(knight_black, [borderSize + tileSize * 3 + (tileSize - imageSize)//2 - imageError, marginSize + borderSize + tileSize * 3.5 + (tileSize - imageSize)//2])
             win.blit(bishop_black, [borderSize + tileSize * 4 + (tileSize - imageSize)//2 - imageError, marginSize + borderSize + tileSize * 3.5 + (tileSize - imageSize)//2])
             win.blit(queen_black, [borderSize + tileSize * 5 + (tileSize - imageSize)//2 - imageError, marginSize + borderSize + tileSize * 3.5 + (tileSize - imageSize)//2])
+
+    if p1KingCheck == True:
+        text = font.render("King in check", 1, (255, 0, 0))
+        win.blit(text, (borderSize + boardWidth - tileSize*2.5, marginSize//2 + marginSize + borderSize + boardHeight + textAlignment))
+
+    if p2KingCheck == True:
+        text = font.render("King in check", 1, (255, 0, 0))
+        win.blit(text, (borderSize + boardWidth - tileSize*2.5, marginSize//2 + textAlignment))
 
     pygame.display.update()
 
@@ -683,6 +693,25 @@ while run:
     #Reset dominant positions
     p1Dom = []
     p2Dom = []
+    p1KingCheck = False
+    p2KingCheck = False
+
+    for i in range(16):
+        p1Dom.append(p1Pieces[i].legal_moves())
+        p2Dom.append(p2Pieces[i].legal_moves())
+
+    enPessantP1 = False
+    enPessantP2 = False
+
+    for x in range(len(p1Dom)):
+        if p2Pos[12] in p1Dom[x]:
+            p2KingCheck = True
+            break
+
+    for x in range(len(p2Dom)):
+        if p1Pos[12] in p2Dom[x]:
+            p1KingCheck = True
+            break
 
     #Set legal_moves to an empty list if mouse is not clicked
     if mouseClicked == False:
@@ -789,7 +818,8 @@ while run:
                                 p1Pieces[x] = pawn(p1Pos[x], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[x])
 
 
-                #Check is piece is selected already
+
+                #Check if piece is selected already
                 if mouseClicked == False:
                     #Log location
                     for i in p1Pos:
@@ -799,23 +829,25 @@ while run:
                                 legal_moves = p1Pieces[p1Pos.index(i)].legal_moves()
 
                                 for x in range(8):
-                                    if p1PieceTypes[x] == 'p' and p1Pos[x][1] == marginSize + borderSize + tileSize*3:
-                                        for z in range(8):
-                                            try:
-                                                if p2PawnMovedTwo[z] == True and p2Pos[z][0] + tileSize == p1Pos[x][0]:
-                                                    if x == p1Pos.index(i):
-                                                        legal_moves.append([p1Pos[x][0]-tileSize, p1Pos[x][1]-tileSize])
-                                                        break
-                                            except IndexError:
-                                                pass
+                                    if p1Pos[x] != '':
+                                        if p1PieceTypes[x] == 'p' and p1Pos[x][1] == marginSize + borderSize + tileSize*3:
+                                            for z in range(8):
+                                                if p2Pos[z] != '':
+                                                    try:
+                                                        if p2PawnMovedTwo[z] == True and p2Pos[z][0] + tileSize == p1Pos[x][0]:
+                                                            if x == p1Pos.index(i):
+                                                                legal_moves.append([p1Pos[x][0]-tileSize, p1Pos[x][1]-tileSize])
+                                                                break
+                                                    except IndexError:
+                                                        pass
 
-                                            try:
-                                                if p2PawnMovedTwo[z] == True and p2Pos[z][0] - tileSize == p1Pos[x][0]:
-                                                    if x == p1Pos.index(i):
-                                                        legal_moves.append([p1Pos[x][0]+tileSize, p1Pos[x][1]-tileSize])
-                                                        break
-                                            except IndexError:
-                                                pass
+                                                    try:
+                                                        if p2PawnMovedTwo[z] == True and p2Pos[z][0] - tileSize == p1Pos[x][0]:
+                                                            if x == p1Pos.index(i):
+                                                                legal_moves.append([p1Pos[x][0]+tileSize, p1Pos[x][1]-tileSize])
+                                                                break
+                                                    except IndexError:
+                                                        pass
 
                                 for x in range(len(legals_remove)):
                                     if p1Pos.index(i) == legals_remove[x][0]:
@@ -885,6 +917,8 @@ while run:
                                 else:
                                     if old_pos[1] - p1Pos[i][1] == tileSize*2:
                                         p1PawnMovedTwo[i] = True
+                                    if old_pos[0] != p1Pos[i][0] and j not in p2Pos:
+                                        enPessantP1 = True
                                     p1PawnMoved[i] = True
                                     p1Pieces[i] = pawn(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[i])
 
@@ -908,6 +942,9 @@ while run:
                             #Remove opponent's piece if taken
                             if j in p2Pos and j in legal_moves:
                                 p2Pos[p2Pos.index(j)] = ''
+
+                            if enPessantP1 == True:
+                                p2Pos[p2Pos.index([j[0], j[1] + tileSize])] = ''
 
                             #Register move and reset mouseclick
                             noMove = False
@@ -1009,6 +1046,8 @@ while run:
                             elif p2Pos[x] != '':
                                 p2Pieces[x] = pawn(p2Pos[x], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[x])
 
+
+
                 #Check if piece is selected already
                 if mouseClicked == False:
                     #Log location
@@ -1019,23 +1058,25 @@ while run:
                                 legal_moves = p2Pieces[p2Pos.index(i)].legal_moves()
 
                                 for x in range(8):
-                                    if p2PieceTypes[x] == 'p' and p2Pos[x][1] == marginSize + borderSize + tileSize*4:
-                                        for z in range(8):
-                                            try:
-                                                if p1PawnMovedTwo[z] == True and p1Pos[z][0] + tileSize == p2Pos[x][0]:
-                                                    if x == p2Pos.index(i):
-                                                        legal_moves.append([p2Pos[x][0]-tileSize, p2Pos[x][1]+tileSize])
-                                                        break
-                                            except IndexError:
-                                                pass
+                                    if p2Pos[x] != '':
+                                        if p2PieceTypes[x] == 'p' and p2Pos[x][1] == marginSize + borderSize + tileSize*4:
+                                            for z in range(8):
+                                                if p1Pos[z] != '':
+                                                    try:
+                                                        if p1PawnMovedTwo[z] == True and p1Pos[z][0] + tileSize == p2Pos[x][0]:
+                                                                if x == p2Pos.index(i):
+                                                                    legal_moves.append([p2Pos[x][0]-tileSize, p2Pos[x][1]+tileSize])
+                                                                    break
+                                                    except IndexError:
+                                                        pass
 
-                                            try:
-                                                if p1PawnMovedTwo[z] == True and p1Pos[z][0] - tileSize == p2Pos[x][0]:
-                                                    if x == p2Pos.index(i):
-                                                        legal_moves.append([p2Pos[x][0]+tileSize, p2Pos[x][1]+tileSize])
-                                                        break
-                                            except IndexError:
-                                                pass
+                                                    try:
+                                                        if p1PawnMovedTwo[z] == True and p1Pos[z][0] - tileSize == p2Pos[x][0]:
+                                                            if x == p2Pos.index(i):
+                                                                legal_moves.append([p2Pos[x][0]+tileSize, p2Pos[x][1]+tileSize])
+                                                                break
+                                                    except IndexError:
+                                                        pass
 
                                 for x in range(len(legals_remove)):
                                     if p2Pos.index(i) == legals_remove[x][0]:
@@ -1102,6 +1143,8 @@ while run:
                                 else:
                                     if p2Pos[i][1] - old_pos[1] == tileSize*2:
                                         p2PawnMovedTwo[i] = True
+                                    if old_pos[0] != p2Pos[i][0] and j not in p1Pos:
+                                        enPessantP2 = True
                                     p2PawnMoved[i] = True
                                     p2Pieces[i] = pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[i])
 
@@ -1124,6 +1167,9 @@ while run:
                             if j in p1Pos:
                                 p1Pos[p1Pos.index(j)] = ''
 
+                            if enPessantP2 == True:
+                                p1Pos[p1Pos.index([j[0], j[1] - tileSize])] = ''
+
                             noMove = False
                             mouseClicked = False
                             p1PawnMovedTwo = [False]*8
@@ -1134,4 +1180,4 @@ while run:
 
 
     if run == True:
-        redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, legal_moves)
+        redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, p1KingCheck, p2KingCheck, legal_moves)
