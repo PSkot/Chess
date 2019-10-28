@@ -56,7 +56,8 @@ class board(object):
         self.x = x
         self.y = y
 
-    def drawTiles(self, win, mouseClicked, selected_location, legal_moves):
+    def drawTiles(self, win, mouseClicked, selected_location, legal_moves, p1CheckMate, p2CheckMate, p1StaleMate, p2StaleMate):
+
         for i in self.x:
             if np.mod(i//tileSize, 2) == 0:
                 next_col = 'white'
@@ -65,7 +66,7 @@ class board(object):
 
             for j in self.y:
                 if next_col == 'black':
-                    if [i, j] == selected_location and mouseClicked == True:
+                    if [i, j] == selected_location and mouseClicked == True and max(p1CheckMate, p2CheckMate, p1StaleMate, p2StaleMate) != True:
                         if legal_moves == []:
                             pygame.draw.rect(win, (225, 0, 0), (i, j, tileSize, tileSize))
                             pygame.draw.rect(win, (169, 169, 169), (i + markingSize, j + markingSize, tileSize - markingSize*2, tileSize - markingSize*2))
@@ -77,7 +78,7 @@ class board(object):
                     next_col = 'white'
 
                 else:
-                    if [i, j] == selected_location and mouseClicked == True:
+                    if [i, j] == selected_location and mouseClicked == True and max(p1CheckMate, p2CheckMate, p1StaleMate, p2StaleMate) != True:
                         if legal_moves == []:
                             pygame.draw.rect(win, (225, 0, 0), (i, j, tileSize, tileSize))
                             pygame.draw.rect(win, (255, 255, 255), (i + markingSize, j + markingSize, tileSize - markingSize*2, tileSize - markingSize*2))
@@ -116,12 +117,12 @@ class pawn(object):
             if self.player == 1:
                 if [self.x, self.y - tileSize] not in self.opp_coords:
                     legals.append([self.x, self.y - tileSize])
-                if [self.x, self.y - tileSize*2] not in self.opp_coords and [self.x, self.y - tileSize] not in self.opp_coords:
+                if [self.x, self.y - tileSize*2] not in self.opp_coords and [self.x, self.y - tileSize] not in self.opp_coords and [self.x, self.y - tileSize] not in self.own_coords:
                     legals.append([self.x, self.y - tileSize*2])
             else:
                 if [self.x, self.y + tileSize] not in self.opp_coords:
                     legals.append([self.x, self.y + tileSize])
-                if [self.x, self.y + tileSize*2] not in self.opp_coords and [self.x, self.y + tileSize] not in self.opp_coords:
+                if [self.x, self.y + tileSize*2] not in self.opp_coords and [self.x, self.y + tileSize] not in self.opp_coords and [self.x, self.y + tileSize] not in self.own_coords:
                     legals.append([self.x, self.y + tileSize*2])
         else:
             if self.player == 1:
@@ -496,11 +497,14 @@ class queen(object):
                 win.blit(queen_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 class king(object):
-    def __init__(self, coord, opp_coords, own_coords, col, player, moved):
+    def __init__(self, coord, opp_coords, own_coords, opp_dom, leftRookMoved, rightRookMoved, col, player, moved):
         self.x = coord[0]
         self.y = coord[1]
         self.opp_coords = opp_coords
         self.own_coords = own_coords
+        self.opp_dom = opp_dom
+        self.leftRookMoved = leftRookMoved
+        self.rightRookMoved = rightRookMoved
         self.col = col
         self.player = player
         self.moved = moved
@@ -571,6 +575,18 @@ class king(object):
         except IndexError:
             pass
 
+        if self.moved == False and self.rightRookMoved == False:
+            if ([self.x + tileSize, self.y] not in self.own_coords and [self.x + tileSize*2, self.y] not in self.own_coords and
+            [self.x, self.y] not in self.opp_dom and [self.x + tileSize, self.y] not in self.opp_dom and [self.x + tileSize*2, self.y] not in self.opp_dom and
+            [self.x + tileSize, self.y] not in self.opp_coords and [self.x + tileSize*2, self.y] not in self.opp_coords):
+                legals.append([self.x + tileSize*2, self.y])
+
+        if self.moved == False and self.leftRookMoved == False:
+            if ([self.x - tileSize, self.y] not in self.own_coords and [self.x - tileSize*2, self.y] not in self.own_coords and
+            [self.x, self.y] not in self.opp_dom and [self.x - tileSize, self.y] not in self.opp_dom and [self.x - tileSize*2, self.y] not in self.opp_dom and
+            [self.x - tileSize, self.y] not in self.opp_coords and [self.x - tileSize*2, self.y] not in self.opp_coords):
+                legals.append([self.x - tileSize*2, self.y])
+
         return legals
 
     def draw(self, win):
@@ -580,10 +596,11 @@ class king(object):
                 win.blit(king_black, [self.x + ((tileSize - imageSize)//2) - imageError, self.y + ((tileSize - imageSize)//2)])
 
 #Drawing game window
-def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, p1Kingcheck, p2KingCheck, legal_moves = [], pawn = False, player = 1):
+def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, p1KingCheck, p2KingCheck,
+                    p1CheckMate, p2CheckMate, p1StaleMate, p2StaleMate, legal_moves = [], pawn = False, player = 1):
     #Draw board
     board.drawBorder(win)
-    board.drawTiles(win, mouseClicked, selected_location, legal_moves)
+    board.drawTiles(win, mouseClicked, selected_location, legal_moves, p1CheckMate, p2CheckMate, p1StaleMate, p2StaleMate)
     board.drawMargin(win)
 
     #Draw pieces
@@ -603,7 +620,6 @@ def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked,
         pygame.draw.rect(gameWindow, (212, 175, 55), (borderSize + tileSize, marginSize + borderSize + tileSize*3, tileSize*6, tileSize*2))
         pygame.draw.rect(gameWindow, (192, 192, 192), (borderSize*2 + tileSize, marginSize + borderSize*2 + tileSize*3, tileSize*6 - borderSize*2, tileSize*2 - borderSize*2))
 
-
         if player == 1:
             win.blit(rook_white, [borderSize + tileSize * 2 + (tileSize - imageSize)//2 - imageError, marginSize + borderSize + tileSize * 3.5 + (tileSize - imageSize)//2])
             win.blit(knight_white, [borderSize + tileSize * 3 + (tileSize - imageSize)//2 - imageError, marginSize + borderSize + tileSize * 3.5 + (tileSize - imageSize)//2])
@@ -617,12 +633,38 @@ def redrawGameWindow(win, board, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked,
             win.blit(queen_black, [borderSize + tileSize * 5 + (tileSize - imageSize)//2 - imageError, marginSize + borderSize + tileSize * 3.5 + (tileSize - imageSize)//2])
 
     if p1KingCheck == True:
-        text = font.render("King in check", 1, (255, 0, 0))
-        win.blit(text, (borderSize + boardWidth - tileSize*2.5, marginSize//2 + marginSize + borderSize + boardHeight + textAlignment))
+        if p1CheckMate == True:
+            pygame.draw.rect(gameWindow, (212, 175, 55), (borderSize + tileSize, marginSize + borderSize + tileSize*3, tileSize*6, tileSize*2))
+            pygame.draw.rect(gameWindow, (192, 192, 192), (borderSize*2 + tileSize, marginSize + borderSize*2 + tileSize*3, tileSize*6 - borderSize*2, tileSize*2 - borderSize*2))
+            text = font.render("Player 1 checkmate. Play again?", 1, (0, 0, 0))
+            text_rect = text.get_rect(center = ((borderSize*2+boardWidth)//2, (marginSize*2 + borderSize*2 + boardHeight)//2 - 50))
+            win.blit(text, text_rect)
+        elif p1StaleMate == True:
+            pygame.draw.rect(gameWindow, (212, 175, 55), (borderSize + tileSize, marginSize + borderSize + tileSize*3, tileSize*6, tileSize*2))
+            pygame.draw.rect(gameWindow, (192, 192, 192), (borderSize*2 + tileSize, marginSize + borderSize*2 + tileSize*3, tileSize*6 - borderSize*2, tileSize*2 - borderSize*2))
+            text = font.render("Player 1 stalemate. Play again?", 1, (0, 0, 0))
+            text_rect = text.get_rect(center = ((borderSize*2+boardWidth)//2, (marginSize*2 + borderSize*2 + boardHeight)//2 - 50))
+            win.blit(text, text_rect)
+        else:
+            text = font.render("King in check", 1, (255, 0, 0))
+            win.blit(text, (borderSize + boardWidth - tileSize*2.5, marginSize//2 + marginSize + borderSize + boardHeight + textAlignment))
 
     if p2KingCheck == True:
-        text = font.render("King in check", 1, (255, 0, 0))
-        win.blit(text, (borderSize + boardWidth - tileSize*2.5, marginSize//2 + textAlignment))
+        if p2CheckMate == True:
+            pygame.draw.rect(gameWindow, (212, 175, 55), (borderSize + tileSize, marginSize + borderSize + tileSize*3, tileSize*6, tileSize*2))
+            pygame.draw.rect(gameWindow, (192, 192, 192), (borderSize*2 + tileSize, marginSize + borderSize*2 + tileSize*3, tileSize*6 - borderSize*2, tileSize*2 - borderSize*2))
+            text = font.render("Player 2 checkmate. Play again?", 1, (0, 0, 0))
+            text_rect = text.get_rect(center = ((borderSize*2+boardWidth)//2, (marginSize*2 + borderSize*2 + boardHeight)//2 - 50))
+            win.blit(text, text_rect)
+        elif p2StaleMate == True:
+            pygame.draw.rect(gameWindow, (212, 175, 55), (borderSize + tileSize, marginSize + borderSize + tileSize*3, tileSize*6, tileSize*2))
+            pygame.draw.rect(gameWindow, (192, 192, 192), (borderSize*2 + tileSize, marginSize + borderSize*2 + tileSize*3, tileSize*6 - borderSize*2, tileSize*2 - borderSize*2))
+            text = font.render("Player 2 stalemate. Play again?", 1, (0, 0, 0))
+            text_rect = text.get_rect(center = ((borderSize*2+boardWidth)//2, (marginSize*2 + borderSize*2 + boardHeight)//2 - 50))
+            win.blit(text, text_rect)
+        else:
+            text = font.render("King in check", 1, (255, 0, 0))
+            win.blit(text, (borderSize + boardWidth - tileSize*2.5, marginSize//2 + textAlignment))
 
     pygame.display.update()
 
@@ -632,6 +674,8 @@ mouseClicked = False
 
 p1Pos = []
 p2Pos = []
+p1Dom = []
+p2Dom = []
 p1Pieces = []
 p2Pieces = []
 
@@ -670,8 +714,8 @@ for i in range (8, 16):
         p2Pieces.append(queen(p2Pos[i], p1Pos, p2Pos, col = p2Col))
 
     elif i == 12:
-        p1Pieces.append(king(p1Pos[i], p2Pos, p1Pos, col = p1Col, player = 1, moved = False))
-        p2Pieces.append(king(p2Pos[i], p1Pos, p2Pos, col = p2Col, player = 2, moved = False))
+        p1Pieces.append(king(p1Pos[i], p2Pos, p1Pos, p2Dom, leftRookMoved = False, rightRookMoved = False, col = p1Col, player = 1, moved = False))
+        p2Pieces.append(king(p2Pos[i], p1Pos, p2Pos, p1Dom, leftRookMoved = False, rightRookMoved = False, col = p2Col, player = 2, moved = False))
 
 #Main program
 run = True
@@ -685,6 +729,16 @@ p1PawnMovedTwo = [False]*8
 p2PawnMovedTwo = [False]*8
 p1KingMoved = False
 p2KingMoved = False
+p1LeftRookMoved = False
+p2LeftRookMoved = False
+p1RightRookMoved = False
+p2RightRookMoved = False
+p1KingCheck = False
+p2KingCheck = False
+p1CheckMate = False
+p2CheckMate = False
+p1StaleMate = False
+p2StaleMate = False
 
 while run:
     #Initiate gameboard
@@ -693,29 +747,274 @@ while run:
     #Reset dominant positions
     p1Dom = []
     p2Dom = []
+
     p1KingCheck = False
     p2KingCheck = False
 
-    for i in range(16):
-        p1Dom.append(p1Pieces[i].legal_moves())
-        p2Dom.append(p2Pieces[i].legal_moves())
-
-    enPessantP1 = False
-    enPessantP2 = False
-
-    for x in range(len(p1Dom)):
-        if p2Pos[12] in p1Dom[x]:
-            p2KingCheck = True
-            break
-
-    for x in range(len(p2Dom)):
-        if p1Pos[12] in p2Dom[x]:
-            p1KingCheck = True
-            break
 
     #Set legal_moves to an empty list if mouse is not clicked
     if mouseClicked == False:
         legal_moves = []
+
+    ### Player 1 illegals ###
+    if p1Turn == True:
+        p1PosTemp = p1Pos.copy()
+        p2PosTemp = p2Pos.copy()
+        # #Create array to store otherwise legal moves to remove
+        legals_remove = []
+
+        for k in range(len(p1Pos)):
+            legals_active = p1Pieces[k].legal_moves()
+
+            for h in legals_active:
+                #Player 2 piece positions
+                p1Pos[k] = h
+                if p1PieceTypes[k] == 'r' and p1Pos[k] != '':
+                    p1Pieces[k] = rook(p1Pos[k], p2Pos, p1Pos, col = p1Col)
+
+                elif p1PieceTypes[k] == 'n' and p1Pos[k] != '':
+                    p1Pieces[k] = knight(p1Pos[k], p2Pos, p1Pos, col = p1Col)
+
+                elif p1PieceTypes[k] == 'b' and p1Pos[k] != '':
+                    p1Pieces[k] = bishop(p1Pos[k], p2Pos, p1Pos, col = p1Col)
+
+                elif p1PieceTypes[k] == 'q' and p1Pos[k] != '':
+                    p1Pieces[k] = queen(p1Pos[k], p2Pos, p1Pos, col = p1Col)
+
+                elif p1PieceTypes[k] == 'k' and p1Pos[k] != '':
+                    p1Pieces[k] = king(p1Pos[k], p2Pos, p1Pos, p2Dom, leftRookMoved = p1LeftRookMoved, rightRookMoved = p1RightRookMoved, player = 1, col = p1Col, moved = True)
+
+                elif p1Pos[k] != '':
+                    p1Pieces[k] = pawn(p1Pos[k], p2Pos, p1Pos, player = 1, col = p1Col, moved = True)
+
+                #Update p2Pieces for legal_moves function
+                for i in range(len(p2Pos)):
+                    if h == p2Pos[i]:
+                        p2Pos[i] = ''
+
+                for i in range(len(p2Pos)):
+                    if p2PieceTypes[i] == 'r' and p2Pos[i] != '':
+                        p2Pieces[i] = rook(p2Pos[i], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[i] == 'n' and p2Pos[i] != '':
+                        p2Pieces[i] = knight(p2Pos[i], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[i] == 'b' and p2Pos[i] != '':
+                        p2Pieces[i] = bishop(p2Pos[i], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[i] == 'q' and p2Pos[i] != '':
+                        p2Pieces[i] = queen(p2Pos[i], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[i] == 'k' and p2Pos[i] != '':
+                        p2Pieces[i] = king(p2Pos[i], p1Pos, p2Pos, p1Dom, leftRookMoved = p2LeftRookMoved, rightRookMoved = p2RightRookMoved, player = 2, col = p2Col, moved = p2KingMoved)
+                    elif p2Pos[i] != '':
+                        p2Pieces[i] = pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[i])
+
+                    opp_legals = p2Pieces[i].legal_moves()
+                    for j in range(len(opp_legals)):
+                        if h == p2Pos[i] or p2Pos[i] == '':
+                            pass
+                        elif p1Pos[12] == opp_legals[j]:
+                            legals_remove.append([k, h])
+
+                    #Reset P2 legal moves
+                    for x in range(len(p2Pos)):
+                        if p2PieceTypes[x] == 'r' and p2Pos[x] != '':
+                            p2Pieces[x] = rook(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                        elif p2PieceTypes[x] == 'n' and p2Pos[x] != '':
+                            p2Pieces[x] = knight(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                        elif p2PieceTypes[x] == 'b' and p2Pos[x] != '':
+                            p2Pieces[x] = bishop(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                        elif p2PieceTypes[x] == 'q' and p2Pos[x] != '':
+                            p2Pieces[x] = queen(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                        elif p2PieceTypes[x] == 'k' and p2Pos[x] != '':
+                            p2Pieces[x] = king(p2Pos[x], p1Pos, p2Pos, p1Dom, leftRookMoved = p2LeftRookMoved, rightRookMoved = p2RightRookMoved, player = 2, col = p2Col, moved = p2KingMoved)
+                        elif p2Pos[x] != '':
+                            p2Pieces[x] = pawn(p2Pos[x], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[x])
+
+                p1Pos = p1PosTemp.copy()
+                p2Pos = p2PosTemp.copy()
+
+                #Reset P1 legal moves
+                for x in range(len(p1Pos)):
+                    if p1PieceTypes[x] == 'r' and p1Pos[x] != '':
+                        p1Pieces[x] = rook(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[x] == 'n' and p1Pos[x] != '':
+                        p1Pieces[x] = knight(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[x] == 'b' and p1Pos[x] != '':
+                        p1Pieces[x] = bishop(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[x] == 'q' and p1Pos[x] != '':
+                        p1Pieces[x] = queen(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[x] == 'k' and p1Pos[x] != '':
+                        p1Pieces[x] = king(p1Pos[x], p2Pos, p1Pos, p2Dom, leftRookMoved = p1LeftRookMoved, rightRookMoved = p1RightRookMoved, player = 1, col = p1Col, moved = p1KingMoved)
+                    elif p1Pos[x] != '':
+                        p1Pieces[x] = pawn(p1Pos[x], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[x])
+
+                #Reset P2 legal moves
+                for x in range(len(p2Pos)):
+                    if p2PieceTypes[x] == 'r' and p2Pos[x] != '':
+                        p2Pieces[x] = rook(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[x] == 'n' and p2Pos[x] != '':
+                        p2Pieces[x] = knight(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[x] == 'b' and p2Pos[x] != '':
+                        p2Pieces[x] = bishop(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[x] == 'q' and p2Pos[x] != '':
+                        p2Pieces[x] = queen(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[x] == 'k' and p2Pos[x] != '':
+                        p2Pieces[x] = king(p2Pos[x], p1Pos, p2Pos, p1Dom, leftRookMoved = p2LeftRookMoved, rightRookMoved = p2RightRookMoved, player = 2, col = p2Col, moved = p2KingMoved)
+                    elif p2Pos[x] != '':
+                        p2Pieces[x] = pawn(p2Pos[x], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[x])
+
+    ### Player 2 illegals ###
+    else:
+        #Store current state
+        p1PosTemp = p1Pos.copy()
+        p2PosTemp = p2Pos.copy()
+        # #Create array to store otherwise legal moves to remove
+        legals_remove = []
+        for k in range(len(p2Pos)):
+            legals_active = p2Pieces[k].legal_moves()
+
+            for h in legals_active:
+                #Player 2 piece positions
+                p2Pos[k] = h
+                if p2PieceTypes[k] == 'r' and p2Pos[k] != '':
+                    p2Pieces[k] = rook(p2Pos[k], p1Pos, p2Pos, col = p2Col)
+
+                elif p2PieceTypes[k] == 'n' and p2Pos[k] != '':
+                    p2Pieces[k] = knight(p2Pos[k], p1Pos, p2Pos, col = p2Col)
+
+                elif p2PieceTypes[k] == 'b' and p2Pos[k] != '':
+                    p2Pieces[k] = bishop(p2Pos[k], p1Pos, p2Pos, col = p2Col)
+
+                elif p2PieceTypes[k] == 'q' and p2Pos[k] != '':
+                    p2Pieces[k] = queen(p2Pos[k], p1Pos, p2Pos, col = p2Col)
+
+                elif p2PieceTypes[k] == 'k' and p2Pos[k] != '':
+                    p2Pieces[k] = king(p2Pos[k], p1Pos, p2Pos, p1Dom, leftRookMoved = p2LeftRookMoved, rightRookMoved = p2RightRookMoved, player = 2, col = p2Col, moved = True)
+
+                elif p2Pos[k] != '':
+                    p2Pieces[k] = pawn(p2Pos[k], p1Pos, p2Pos, player = 2, col = p2Col, moved = True)
+
+
+                #Update p1Pieces for legal_moves function
+                for i in range(len(p1Pos)):
+                    if h == p1Pos[i]:
+                        p1Pos[i] = ''
+
+                for i in range(len(p1Pos)):
+                    if p1PieceTypes[i] == 'r' and p1Pos[i] != '':
+                        p1Pieces[i] = rook(p1Pos[i], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[i] == 'n' and p1Pos[i] != '':
+                        p1Pieces[i] = knight(p1Pos[i], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[i] == 'b' and p1Pos[i] != '':
+                        p1Pieces[i] = bishop(p1Pos[i], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[i] == 'q' and p1Pos[i] != '':
+                        p1Pieces[i] = queen(p1Pos[i], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[i] == 'k' and p1Pos[i] != '':
+                        p1Pieces[i] = king(p1Pos[i], p2Pos, p1Pos, p2Dom, leftRookMoved = p1LeftRookMoved, rightRookMoved = p1RightRookMoved, player = 1, col = p1Col, moved = p1KingMoved)
+                    elif p1Pos[i] != '':
+                        p1Pieces[i] = pawn(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[i])
+
+                    opp_legals = p1Pieces[i].legal_moves()
+                    for j in range(len(opp_legals)):
+                        if h == p1Pos[i] or p1Pos[i] == '':
+                            pass
+                        elif p2Pos[12] == opp_legals[j]:
+                            legals_remove.append([k, h])
+
+                    for x in range(len(p1Pos)):
+                        #Reset P1 legal moves
+                        if p1PieceTypes[x] == 'r' and p1Pos[x] != '':
+                            p1Pieces[x] = rook(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                        elif p1PieceTypes[x] == 'n' and p1Pos[x] != '':
+                            p1Pieces[x] = knight(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                        elif p1PieceTypes[x] == 'b' and p1Pos[x] != '':
+                            p1Pieces[x] = bishop(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                        elif p1PieceTypes[x] == 'q' and p1Pos[x] != '':
+                            p1Pieces[x] = queen(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                        elif p1PieceTypes[x] == 'k' and p1Pos[x] != '':
+                            p1Pieces[x] = king(p1Pos[x], p2Pos, p1Pos, p1Dom, leftRookMoved = p1LeftRookMoved, rightRookMoved = p1RightRookMoved, player = 1, col = p1Col, moved = p1KingMoved)
+                        elif p1Pos[x] != '':
+                            p1Pieces[x] = pawn(p1Pos[x], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[x])
+
+                p1Pos = p1PosTemp.copy()
+                p2Pos = p2PosTemp.copy()
+
+                #Reset P2 legal moves
+                for x in range(len(p2Pos)):
+                    if p2PieceTypes[x] == 'r' and p2Pos[x] != '':
+                        p2Pieces[x] = rook(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[x] == 'n' and p2Pos[x] != '':
+                        p2Pieces[x] = knight(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[x] == 'b' and p2Pos[x] != '':
+                        p2Pieces[x] = bishop(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[x] == 'q' and p2Pos[x] != '':
+                        p2Pieces[x] = queen(p2Pos[x], p1Pos, p2Pos, col = p2Col)
+                    elif p2PieceTypes[x] == 'k' and p2Pos[x] != '':
+                        p2Pieces[x] = king(p2Pos[x], p1Pos, p2Pos, p1Dom, leftRookMoved = p2LeftRookMoved, rightRookMoved = p2RightRookMoved, player = 2, col = p2Col, moved = p2KingMoved)
+                    elif p2Pos[x] != '':
+                        p2Pieces[x] = pawn(p2Pos[x], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[x])
+
+                for x in range(len(p1Pos)):
+                    #Reset P1 legal moves
+                    if p1PieceTypes[x] == 'r' and p1Pos[x] != '':
+                        p1Pieces[x] = rook(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[x] == 'n' and p1Pos[x] != '':
+                        p1Pieces[x] = knight(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[x] == 'b' and p1Pos[x] != '':
+                        p1Pieces[x] = bishop(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[x] == 'q' and p1Pos[x] != '':
+                        p1Pieces[x] = queen(p1Pos[x], p2Pos, p1Pos, col = p1Col)
+                    elif p1PieceTypes[x] == 'k' and p1Pos[x] != '':
+                        p1Pieces[x] = king(p1Pos[x], p2Pos, p1Pos, p2Dom, leftRookMoved = p1LeftRookMoved, rightRookMoved = p1RightRookMoved, player = 1, col = p1Col, moved = p1KingMoved)
+                    elif p1Pos[x] != '':
+                        p1Pieces[x] = pawn(p1Pos[x], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[x])
+
+
+    for i in range(16):
+        if p1Pos[i] != '':
+            legals = p1Pieces[i].legal_moves()
+            if p1Turn == True:
+                for x in range(len(legals_remove)):
+                    if i == legals_remove[x][0]:
+                            try:
+                                del legals[legals.index(legals_remove[x][1])]
+                            except ValueError:
+                                pass
+            p1Dom.append(legals)
+        if p2Pos[i] != '':
+            legals = p2Pieces[i].legal_moves()
+            if p1Turn == False:
+                for x in range(len(legals_remove)):
+                        if i == legals_remove[x][0]:
+                            try:
+                                del legals[legals.index(legals_remove[x][1])]
+                            except ValueError:
+                                pass
+            p2Dom.append(legals)
+
+    enPessantP1 = False
+    enPessantP2 = False
+
+    p1Dom = [x for x in p1Dom if x != []]
+    p2Dom = [x for x in p2Dom if x != []]
+
+    for x in range(len(p1Dom)):
+        if p2Pos[12] in p1Dom[x]:
+            p2KingCheck = True
+
+    for x in range(len(p2Dom)):
+        if p1Pos[12] in p2Dom[x]:
+            p1KingCheck = True
+
+    if p1Turn == True and p1Dom == []:
+        if p1KingCheck == True:
+            p1CheckMate = True
+        else:
+            p1StaleMate = True
+
+    elif p2Dom == []:
+        if p2KingCheck == True:
+            p2CheckMate = True
+        else:
+            p2StaleMate = True
 
     #Get events
     for event in pygame.event.get():
@@ -726,98 +1025,11 @@ while run:
 
         #Check if mouse button is clicked
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-
             mousePos = list(pygame.mouse.get_pos())
-
 
             #Player 1
             if p1Turn == True:
                 #Store current state
-
-                p1PosTemp = p1Pos.copy()
-                p1PiecesTemp = p1Pieces.copy()
-                # #Create array to store otherwise legal moves to remove
-                legals_remove = []
-                for k in range(len(p1Pos)):
-                    legals_active = p1Pieces[k].legal_moves()
-
-                    for h in legals_active:
-                        #Player 2 piece positions
-                        p1Pos[k] = h
-                        if p1PieceTypes[k] == 'r' and p1Pos[k] != '':
-                            p1Pieces[k] = rook(p1Pos[k], p2Pos, p1Pos, col = p1Col)
-
-                        elif p1PieceTypes[k] == 'n' and p1Pos[k] != '':
-                            p1Pieces[k] = knight(p1Pos[k], p2Pos, p1Pos, col = p1Col)
-
-                        elif p1PieceTypes[k] == 'b' and p1Pos[k] != '':
-                            p1Pieces[k] = bishop(p1Pos[k], p2Pos, p1Pos, col = p1Col)
-
-                        elif p1PieceTypes[k] == 'q' and p1Pos[k] != '':
-                            p1Pieces[k] = queen(p1Pos[k], p2Pos, p1Pos, col = p1Col)
-
-                        elif p1PieceTypes[k] == 'k' and p1Pos[k] != '':
-                            p1Pieces[k] = king(p1Pos[k], p2Pos, p1Pos, player = 1, col = p1Col, moved = True)
-
-                        elif p2Pos[k] != '':
-                            p1Pieces[k] = pawn(p1Pos[k], p2Pos, p1Pos, player = 1, col = p1Col, moved = True)
-
-                        for i in range(len(p2Pos)):
-                            #Update p2Pieces for legal_moves function
-                            if p2PieceTypes[i] == 'r' and p2Pos[i] != '':
-                                p2Pieces[i] = rook(p2Pos[i], p1Pos, p2Pos, col = p2Col)
-                            elif p2PieceTypes[i] == 'n' and p2Pos[i] != '':
-                                p2Pieces[i] = knight(p2Pos[i], p1Pos, p2Pos, col = p2Col)
-                            elif p2PieceTypes[i] == 'b' and p2Pos[i] != '':
-                                p2Pieces[i] = bishop(p2Pos[i], p1Pos, p2Pos, col = p2Col)
-                            elif p2PieceTypes[i] == 'q' and p2Pos[i] != '':
-                                p2Pieces[i] = queen(p2Pos[i], p1Pos, p2Pos, col = p2Col)
-                            elif p2PieceTypes[i] == 'k' and p2Pos[i] != '':
-                                p2Pieces[i] = king(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2KingMoved)
-                            elif p2Pos[i] != '':
-                                p2Pieces[i] = pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[i])
-
-                            opp_legals = p2Pieces[i].legal_moves()
-                            for j in range(len(opp_legals)):
-                                if h == p2Pos[i] or p2Pos[i] == '':
-                                    pass
-                                elif p1Pos[12] == opp_legals[j]:
-                                    legals_remove.append([k, h])
-
-                            #Reset P2 legal moves
-                            for x in range(len(p2Pos)):
-                                if p2PieceTypes[x] == 'r' and p2Pos[x] != '':
-                                    p2Pieces[x] = rook(p2Pos[x], p1Pos, p2Pos, col = p2Col)
-                                elif p2PieceTypes[x] == 'n' and p2Pos[x] != '':
-                                    p2Pieces[x] = knight(p2Pos[x], p1Pos, p2Pos, col = p2Col)
-                                elif p2PieceTypes[x] == 'b' and p2Pos[x] != '':
-                                    p2Pieces[x] = bishop(p2Pos[x], p1Pos, p2Pos, col = p2Col)
-                                elif p2PieceTypes[x] == 'q' and p2Pos[x] != '':
-                                    p2Pieces[x] = queen(p2Pos[x], p1Pos, p2Pos, col = p2Col)
-                                elif p2PieceTypes[x] == 'k' and p2Pos[x] != '':
-                                    p2Pieces[x] = king(p2Pos[x], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2KingMoved)
-                                elif p2Pos[x] != '':
-                                    p2Pieces[x] = pawn(p2Pos[x], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[x])
-
-                        p1Pos = p1PosTemp.copy()
-                        p1Pieces = p1PiecesTemp.copy()
-
-                        #Reset P1 legal moves
-                        for x in range(len(p1Pos)):
-                            if p1PieceTypes[x] == 'r' and p1Pos[x] != '':
-                                p1Pieces[x] = rook(p1Pos[x], p2Pos, p1Pos, col = p1Col)
-                            elif p1PieceTypes[x] == 'n' and p1Pos[x] != '':
-                                p1Pieces[x] = knight(p1Pos[x], p2Pos, p1Pos, col = p1Col)
-                            elif p1PieceTypes[x] == 'b' and p1Pos[x] != '':
-                                p1Pieces[x] = bishop(p1Pos[x], p2Pos, p1Pos, col = p1Col)
-                            elif p1PieceTypes[x] == 'q' and p1Pos[x] != '':
-                                p1Pieces[x] = queen(p1Pos[x], p2Pos, p1Pos, col = p1Col)
-                            elif p1PieceTypes[x] == 'k' and p1Pos[x] != '':
-                                p1Pieces[x] = king(p1Pos[x], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1KingMoved)
-                            elif p1Pos[x] != '':
-                                p1Pieces[x] = pawn(p1Pos[x], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[x])
-
-
 
                 #Check if piece is selected already
                 if mouseClicked == False:
@@ -879,7 +1091,7 @@ while run:
                                     if p1Pos[i][1] == marginSize + borderSize:
                                         p = True
                                         while p == True:
-                                            redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, legal_moves, pawn = True)
+                                            redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, p1KingCheck, p2KingCheck, legal_moves, pawn = True)
                                             for event in pygame.event.get():
                                                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                                                     mousePos = list(pygame.mouse.get_pos())
@@ -933,9 +1145,19 @@ while run:
 
                             if p1PieceTypes[i] == 'k':
                                 p1KingMoved = True
-                                p1Pieces[i] = king(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1KingMoved)
+                                if j[0] - old_pos[0] == tileSize*2:
+                                    p1Pos[15][0] = p1Pos[15][0] - tileSize*2
+                                    p1Pieces[15] = rook(p1Pos[15], p2Pos, p1Pos, col = p1Col)
+                                elif old_pos[0] - j[0] == tileSize*2:
+                                    p1Pos[8][0] = p1Pos[8][0] + tileSize*3
+                                    p1Pieces[8] = rook(p1Pos[15], p2Pos, p1Pos, col = p1Col)
+                                p1Pieces[i] = king(p1Pos[i], p2Pos, p1Pos, p2Dom, leftRookMoved = p1LeftRookMoved, rightRookMoved = p1RightRookMoved, player = 1, col = p1Col, moved = p1KingMoved)
 
                             if p1PieceTypes[i] == 'r':
+                                if i == 8:
+                                    p1LeftRookMoved = True
+                                if i == 15:
+                                    p1RightRookMoved = True
                                 p1Pieces[i] = rook(p1Pos[i], p2Pos, p1Pos, col = p1Col)
 
 
@@ -954,98 +1176,11 @@ while run:
 
                     #Switch turn
                     if noMove == False:
+                        p1KingCheck = False
                         p1Turn = False
 
             #Player 2
             else:
-
-                #Store current state
-                p2PosTemp = p2Pos.copy()
-                p2PiecesTemp = p2Pieces.copy()
-                # #Create array to store otherwise legal moves to remove
-                legals_remove = []
-                for k in range(len(p2Pos)):
-                    legals_active = p2Pieces[k].legal_moves()
-
-                    for h in legals_active:
-                        #Player 2 piece positions
-                        p2Pos[k] = h
-                        if p2PieceTypes[k] == 'r' and p2Pos[k] != '':
-                            p2Pieces[k] = rook(p2Pos[k], p1Pos, p2Pos, col = p2Col)
-
-                        elif p2PieceTypes[k] == 'n' and p2Pos[k] != '':
-                            p2Pieces[k] = knight(p2Pos[k], p1Pos, p2Pos, col = p2Col)
-
-                        elif p2PieceTypes[k] == 'b' and p2Pos[k] != '':
-                            p2Pieces[k] = bishop(p2Pos[k], p1Pos, p2Pos, col = p2Col)
-
-                        elif p2PieceTypes[k] == 'q' and p2Pos[k] != '':
-                            p2Pieces[k] = queen(p2Pos[k], p1Pos, p2Pos, col = p2Col)
-
-                        elif p2PieceTypes[k] == 'k' and p2Pos[k] != '':
-                            p2Pieces[k] = king(p2Pos[k], p1Pos, p2Pos, player = 2, col = p2Col, moved = True)
-
-                        elif p2Pos[k] != '':
-                            p2Pieces[k] = pawn(p2Pos[k], p1Pos, p2Pos, player = 2, col = p2Col, moved = True)
-
-
-                        for i in range(len(p1Pos)):
-
-                            #Update p1Pieces for legal_moves function
-                            if p1PieceTypes[i] == 'r' and p1Pos[i] != '':
-                                p1Pieces[i] = rook(p1Pos[i], p2Pos, p1Pos, col = p1Col)
-                            elif p1PieceTypes[i] == 'n' and p1Pos[i] != '':
-                                p1Pieces[i] = knight(p1Pos[i], p2Pos, p1Pos, col = p1Col)
-                            elif p1PieceTypes[i] == 'b' and p1Pos[i] != '':
-                                p1Pieces[i] = bishop(p1Pos[i], p2Pos, p1Pos, col = p1Col)
-                            elif p1PieceTypes[i] == 'q' and p1Pos[i] != '':
-                                p1Pieces[i] = queen(p1Pos[i], p2Pos, p1Pos, col = p1Col)
-                            elif p1PieceTypes[i] == 'k' and p1Pos[i] != '':
-                                p1Pieces[i] = king(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1KingMoved)
-                            elif p1Pos[i] != '':
-                                p1Pieces[i] = pawn(p1Pos[i], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[i])
-
-                            opp_legals = p1Pieces[i].legal_moves()
-                            for j in range(len(opp_legals)):
-                                if h == p1Pos[i] or p1Pos[i] == '':
-                                    pass
-                                elif p2Pos[12] == opp_legals[j]:
-                                    legals_remove.append([k, h])
-
-                            for x in range(len(p1Pos)):
-                                #Reset P1 legal moves
-                                if p1PieceTypes[x] == 'r' and p1Pos[x] != '':
-                                    p1Pieces[x] = rook(p1Pos[x], p2Pos, p1Pos, col = p1Col)
-                                elif p1PieceTypes[x] == 'n' and p1Pos[x] != '':
-                                    p1Pieces[x] = knight(p1Pos[x], p2Pos, p1Pos, col = p1Col)
-                                elif p1PieceTypes[x] == 'b' and p1Pos[x] != '':
-                                    p1Pieces[x] = bishop(p1Pos[x], p2Pos, p1Pos, col = p1Col)
-                                elif p1PieceTypes[x] == 'q' and p1Pos[x] != '':
-                                    p1Pieces[x] = queen(p1Pos[x], p2Pos, p1Pos, col = p1Col)
-                                elif p1PieceTypes[x] == 'k' and p1Pos[x] != '':
-                                    p1Pieces[x] = king(p1Pos[x], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1KingMoved)
-                                elif p1Pos[x] != '':
-                                    p1Pieces[x] = pawn(p1Pos[x], p2Pos, p1Pos, player = 1, col = p1Col, moved = p1PawnMoved[x])
-
-
-                        p2Pos = p2PosTemp.copy()
-                        p2Pieces = p2PiecesTemp.copy()
-
-                        #Reset P2 legal moves
-                        for x in range(len(p2Pos)):
-                            if p2PieceTypes[x] == 'r' and p2Pos[x] != '':
-                                p2Pieces[x] = rook(p2Pos[x], p1Pos, p2Pos, col = p2Col)
-                            elif p2PieceTypes[x] == 'n' and p2Pos[x] != '':
-                                p2Pieces[x] = knight(p2Pos[x], p1Pos, p2Pos, col = p2Col)
-                            elif p2PieceTypes[x] == 'b' and p2Pos[x] != '':
-                                p2Pieces[x] = bishop(p2Pos[x], p1Pos, p2Pos, col = p2Col)
-                            elif p2PieceTypes[x] == 'q' and p2Pos[x] != '':
-                                p2Pieces[x] = queen(p2Pos[x], p1Pos, p2Pos, col = p2Col)
-                            elif p2PieceTypes[x] == 'k' and p2Pos[x] != '':
-                                p2Pieces[x] = king(p2Pos[x], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2KingMoved)
-                            elif p2Pos[x] != '':
-                                p2Pieces[x] = pawn(p2Pos[x], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[x])
-
 
 
                 #Check if piece is selected already
@@ -1105,7 +1240,7 @@ while run:
                                     if p2Pos[i][1] == marginSize + borderSize + tileSize*7:
                                         p = True
                                         while p == True:
-                                            redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, legal_moves, pawn = True, player = 2)
+                                            redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, p1KingCheck, p2KingCheck, legal_moves, pawn = True, player = 2)
                                             for event in pygame.event.get():
                                                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                                                     mousePos = list(pygame.mouse.get_pos())
@@ -1149,6 +1284,10 @@ while run:
                                     p2Pieces[i] = pawn(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2PawnMoved[i])
 
                             if p2PieceTypes[i] == 'r':
+                                if i == 8:
+                                    p2LeftRookMoved = True
+                                if i == 15:
+                                    p2RightRookMoved = True
                                 p2Pieces[i] = rook(p2Pos[i], p1Pos, p2Pos, col = p2Col)
 
                             if p2PieceTypes[i] == 'n':
@@ -1162,7 +1301,13 @@ while run:
 
                             if p2PieceTypes[i] == 'k':
                                 p2KingMoved = True
-                                p2Pieces[i] = king(p2Pos[i], p1Pos, p2Pos, player = 2, col = p2Col, moved = p2KingMoved)
+                                if j[0] - old_pos[0] == tileSize*2:
+                                    p2Pos[15][0] = p2Pos[15][0] - tileSize*2
+                                    p2Pieces[15] = rook(p2Pos[15], p1Pos, p2Pos, col = p2Col)
+                                elif old_pos[0] - j[0] == tileSize*2:
+                                    p2Pos[8][0] = p2Pos[8][0] + tileSize*3
+                                    p2Pieces[8] = rook(p2Pos[15], p1Pos, p2Pos, col = p2Col)
+                                p2Pieces[i] = king(p2Pos[i], p1Pos, p2Pos, p1Dom, leftRookMoved = p2LeftRookMoved, rightRookMoved = p2RightRookMoved, player = 2, col = p2Col, moved = p2KingMoved)
 
                             if j in p1Pos:
                                 p1Pos[p1Pos.index(j)] = ''
@@ -1176,8 +1321,8 @@ while run:
                             break
 
                     if noMove == False:
+                        p2KingCheck = False
                         p1Turn = True
 
-
     if run == True:
-        redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, p1KingCheck, p2KingCheck, legal_moves)
+        redrawGameWindow(gameWindow, gameBoard, p1Pos, p2Pos, p1Pieces, p2Pieces, mouseClicked, selected_location, p1KingCheck, p2KingCheck, p1CheckMate, p2CheckMate, p1StaleMate, p2StaleMate, legal_moves)
