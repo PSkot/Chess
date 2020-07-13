@@ -7,7 +7,7 @@ pygame.init()
 
 #Basic game info
 name = "Chess"
-boardWidth = 720
+boardWidth = 600
 boardHeight = boardWidth
 borderSize = 20
 markingSize = 5
